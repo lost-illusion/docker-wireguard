@@ -1,5 +1,12 @@
 # syntax=docker/dockerfile:1
 
+FROM golang:1.20 as awg
+COPY ./amneziawg-go /awg
+WORKDIR /awg
+RUN go mod download && \
+    go mod verify && \
+    go build -ldflags '-linkmode external -extldflags "-fno-PIC -static"' -v -o /usr/bin
+
 FROM ghcr.io/linuxserver/baseimage-alpine:3.19
 
 # set version label
@@ -8,6 +15,8 @@ ARG VERSION
 ARG WIREGUARD_RELEASE
 LABEL build_version="Linuxserver.io version:- ${VERSION} Build-date:- ${BUILD_DATE}"
 LABEL maintainer="thespad"
+
+COPY ./amneziawg-tools /app/awg-tools
 
 RUN \
   echo "**** install dependencies ****" && \
@@ -29,7 +38,7 @@ RUN \
     libqrencode-tools \
     net-tools \
     openresolv && \
-  echo "wireguard" >> /etc/modules && \
+  # echo "wireguard" >> /etc/modules && \
   cd /sbin && \
   for i in ! !-save !-restore; do \
     rm -rf iptables$(echo "${i}" | cut -c2-) && \
@@ -38,17 +47,14 @@ RUN \
     ln -s ip6tables-legacy$(echo "${i}" | cut -c2-) ip6tables$(echo "${i}" | cut -c2-); \
   done && \
   echo "**** install wireguard-tools ****" && \
-  if [ -z ${WIREGUARD_RELEASE+x} ]; then \
-    WIREGUARD_RELEASE=$(curl -sX GET "https://api.github.com/repos/WireGuard/wireguard-tools/tags" \
-    | jq -r .[0].name); \
-  fi && \
   cd /app && \
-  git clone https://git.zx2c4.com/wireguard-tools && \
-  cd wireguard-tools && \
-  git checkout "${WIREGUARD_RELEASE}" && \
+  cd awg-tools && \
   sed -i 's|\[\[ $proto == -4 \]\] && cmd sysctl -q net\.ipv4\.conf\.all\.src_valid_mark=1|[[ $proto == -4 ]] \&\& [[ $(sysctl -n net.ipv4.conf.all.src_valid_mark) != 1 ]] \&\& cmd sysctl -q net.ipv4.conf.all.src_valid_mark=1|' src/wg-quick/linux.bash && \
   make -C src -j$(nproc) && \
   make -C src install && \
+  chmod +x /usr/bin/awg /usr/bin/awg-quick && \
+  ln -s /usr/bin/awg /usr/bin/wg && \
+  ln -s /usr/bin/awg-quick /usr/bin/wg-quick && \
   rm -rf /etc/wireguard && \
   ln -s /config/wg_confs /etc/wireguard && \
   echo "**** clean up ****" && \
@@ -57,7 +63,7 @@ RUN \
     /tmp/*
 
 # add local files
-COPY /root /
+COPY ./docker-wireguard/root /
 
 # ports and volumes
 EXPOSE 51820/udp
