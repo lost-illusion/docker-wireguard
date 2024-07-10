@@ -64,6 +64,7 @@ RUN \
 
 # add local files
 COPY ./docker-wireguard/root /
+COPY --from=awg /usr/bin/amneziawg-go /usr/bin/amneziawg-go
 
 # ports and volumes
 EXPOSE 51820/udp
