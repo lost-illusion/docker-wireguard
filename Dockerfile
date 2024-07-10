@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM golang:1.20 as awg
+FROM golang:1.22.3 as awg
 COPY ./amneziawg-go /awg
 WORKDIR /awg
 RUN go mod download && \
