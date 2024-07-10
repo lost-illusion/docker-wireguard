@@ -19,6 +19,11 @@ if [[ -z "${WG_CONFS}" ]]; then
     exit 0
 fi
 
+# Check if TUN device is available
+if [[ ! -c /dev/net/tun ]]; then
+    mkdir -p /dev/net && mknod /dev/net/tun c 10 200
+fi
+
 unset FAILED
 for tunnel in ${WG_CONFS[@]}; do
     echo "**** Activating tunnel ${tunnel} ****"
