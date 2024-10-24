@@ -7,7 +7,7 @@ RUN go mod download && \
     go mod verify && \
     go build -ldflags '-linkmode external -extldflags "-fno-PIC -static"' -v -o /usr/bin
 
-FROM ghcr.io/linuxserver/baseimage-alpine:3.19
+FROM ghcr.io/linuxserver/baseimage-alpine:3.20
 
 # set version label
 ARG BUILD_DATE
@@ -34,10 +34,12 @@ RUN \
     iptables-legacy \
     ip6tables \
     iputils \
+    kmod \
     libcap-utils \
     libqrencode-tools \
     net-tools \
-    openresolv && \
+    openresolv \
+  # wireguard-tools && \
   # echo "wireguard" >> /etc/modules && \
   cd /sbin && \
   for i in ! !-save !-restore; do \
@@ -57,6 +59,7 @@ RUN \
   ln -s /usr/bin/awg-quick /usr/bin/wg-quick && \
   rm -rf /etc/wireguard && \
   ln -s /config/wg_confs /etc/wireguard && \
+  printf "Linuxserver.io version: ${VERSION}\nBuild-date: ${BUILD_DATE}" > /build_version && \
   echo "**** clean up ****" && \
   apk del --no-network build-dependencies && \
   rm -rf \

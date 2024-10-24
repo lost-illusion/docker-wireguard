@@ -28,7 +28,7 @@ Find us at:
 
 # [linuxserver/wireguard](https://github.com/linuxserver/docker-wireguard)
 
-[![Scarf.io pulls](https://scarf.sh/installs-badge/linuxserver-ci/linuxserver%2Fwireguard?color=94398d&label-color=555555&logo-color=ffffff&style=for-the-badge&package-type=docker)](https://scarf.sh/gateway/linuxserver-ci/docker/linuxserver%2Fwireguard)
+[![Scarf.io pulls](https://scarf.sh/installs-badge/linuxserver-ci/linuxserver%2Fwireguard?color=94398d&label-color=555555&logo-color=ffffff&style=for-the-badge&package-type=docker)](https://scarf.sh)
 [![GitHub Stars](https://img.shields.io/github/stars/linuxserver/docker-wireguard.svg?color=94398d&labelColor=555555&logoColor=ffffff&style=for-the-badge&logo=github)](https://github.com/linuxserver/docker-wireguard)
 [![GitHub Release](https://img.shields.io/github/release/linuxserver/docker-wireguard.svg?color=94398d&labelColor=555555&logoColor=ffffff&style=for-the-badge&logo=github)](https://github.com/linuxserver/docker-wireguard/releases)
 [![GitHub Package Repository](https://img.shields.io/static/v1.svg?color=94398d&labelColor=555555&logoColor=ffffff&style=for-the-badge&label=linuxserver.io&message=GitHub%20Package&logo=github)](https://github.com/linuxserver/docker-wireguard/packages)
@@ -115,7 +115,7 @@ When routing via Wireguard from another container using the `service` option in 
   Address = 9.8.7.6/32
   DNS = 8.8.8.8
   PostUp = DROUTE=$(ip route | grep default | awk '{print $3}'); HOMENET=192.168.0.0/16; HOMENET2=10.0.0.0/8; HOMENET3=172.16.0.0/12; ip route add $HOMENET3 via $DROUTE;ip route add $HOMENET2 via $DROUTE; ip route add $HOMENET via $DROUTE;iptables -I OUTPUT -d $HOMENET -j ACCEPT;iptables -A OUTPUT -d $HOMENET2 -j ACCEPT; iptables -A OUTPUT -d $HOMENET3 -j ACCEPT;  iptables -A OUTPUT ! -o %i -m mark ! --mark $(wg show %i fwmark) -m addrtype ! --dst-type LOCAL -j REJECT
-  PreDown = HOMENET=192.168.0.0/16; HOMENET2=10.0.0.0/8; HOMENET3=172.16.0.0/12; ip route del $HOMENET3 via $DROUTE;ip route del $HOMENET2 via $DROUTE; ip route del $HOMENET via $DROUTE; iptables -D OUTPUT ! -o %i -m mark ! --mark $(wg show %i fwmark) -m addrtype ! --dst-type LOCAL -j REJECT; iptables -D OUTPUT -d $HOMENET -j ACCEPT; iptables -D OUTPUT -d $HOMENET2 -j ACCEPT; iptables -D OUTPUT -d $HOMENET3 -j ACCEPT
+  PreDown = DROUTE=$(ip route | grep default | awk '{print $3}'); HOMENET=192.168.0.0/16; HOMENET2=10.0.0.0/8; HOMENET3=172.16.0.0/12; ip route del $HOMENET3 via $DROUTE;ip route del $HOMENET2 via $DROUTE; ip route del $HOMENET via $DROUTE; iptables -D OUTPUT ! -o %i -m mark ! --mark $(wg show %i fwmark) -m addrtype ! --dst-type LOCAL -j REJECT; iptables -D OUTPUT -d $HOMENET -j ACCEPT; iptables -D OUTPUT -d $HOMENET2 -j ACCEPT; iptables -D OUTPUT -d $HOMENET3 -j ACCEPT
   ```
 
 ## Site-to-site VPN
@@ -131,6 +131,15 @@ For instance `SERVER_ALLOWEDIPS_PEER_laptop="192.168.1.0/24,192.168.2.0/24"` wil
 Keep in mind that this var will only be considered when the confs are regenerated. Adding this var for an existing peer won't force a regeneration. You can delete wg0.conf and restart the container to force regeneration if necessary.
 
 Don't forget to set the necessary POSTUP and POSTDOWN rules in your client's peer conf for lan access.
+
+## Read-Only Operation
+
+This image can be run with a read-only container filesystem. For details please [read the docs](https://docs.linuxserver.io/misc/read-only/).
+
+### Caveats
+
+* Not supported in client mode.
+* Not supported for the `legacy` tag.
 
 ## Usage
 
@@ -160,7 +169,7 @@ services:
       - PERSISTENTKEEPALIVE_PEERS= #optional
       - LOG_CONFS=true #optional
     volumes:
-      - /path/to/appdata/config:/config
+      - /path/to/wireguard/config:/config
       - /lib/modules:/lib/modules #optional
     ports:
       - 51820:51820/udp
@@ -188,7 +197,7 @@ docker run -d \
   -e PERSISTENTKEEPALIVE_PEERS= `#optional` \
   -e LOG_CONFS=true `#optional` \
   -p 51820:51820/udp \
-  -v /path/to/appdata/config:/config \
+  -v /path/to/wireguard/config:/config \
   -v /lib/modules:/lib/modules `#optional` \
   --sysctl="net.ipv4.conf.all.src_valid_mark=1" \
   --restart unless-stopped \
@@ -216,6 +225,7 @@ Containers are configured using parameters passed at runtime (such as those abov
 | `-v /config` | Contains all relevant configuration files. |
 | `-v /lib/modules` | Host kernel modules for situations where they're not already loaded. |
 | `--sysctl=` | Required for client mode. |
+| `--read-only=true` | Run container with a read-only filesystem. Please [read the docs](https://docs.linuxserver.io/misc/read-only/). |
 
 ### Portainer notice
 
@@ -357,7 +367,8 @@ Below are the instructions for updating containers:
 
 ### Image Update Notifications - Diun (Docker Image Update Notifier)
 
-**tip**: We recommend [Diun](https://crazymax.dev/diun/) for update notifications. Other tools that automatically update containers unattended are not recommended or supported.
+>[!TIP]
+>We recommend [Diun](https://crazymax.dev/diun/) for update notifications. Other tools that automatically update containers unattended are not recommended or supported.
 
 ## Building locally
 
@@ -382,6 +393,9 @@ Once registered you can define the dockerfile to use with `-f Dockerfile.aarch64
 
 ## Versions
 
+* **13.08.24:** - Add `errors` plugin to default Corefile.
+* **23.07.24:** - Install kmod from alpine repository.
+* **24.05.24:** - Rebase to Alpine 3.20, install wireguard-tools from Alpine repo.
 * **10.03.24:** - Use iptables-legacy on Alpine 3.19.
 * **05.03.24:** - Rebase master to Alpine 3.19.
 * **03.10.23:** - **Potentially Breaking Change:** Support for multiple interfaces added. Wireguard confs moved to `/config/wg_confs/`. Any file with a `.conf` extension in that folder will be treated as a live tunnel config and will be attempted to start. If any of the tunnels fail, all tunnels will be stopped. Tunnels are started in alphabetical order. Managed server conf will continue to be hardcoded to `wg0.conf`.
