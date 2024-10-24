@@ -38,7 +38,7 @@ RUN \
     libcap-utils \
     libqrencode-tools \
     net-tools \
-    openresolv \
+    openresolv && \
   # wireguard-tools && \
   # echo "wireguard" >> /etc/modules && \
   cd /sbin && \
